@@ -13,6 +13,13 @@ if (!window.VSC.StorageManager) {
   /** True when chrome.storage.sync is available (extension contexts). */
   const hasChrome = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync;
 
+  /** True when running in a dynamically injected script (Firefox MAIN world). */
+  const hasPostMessage = !hasChrome && typeof window !== 'undefined' && window.postMessage;
+
+  /** True when pre-injected settings element exists (Firefox bridge). */
+  const hasPreinjectedSettings =
+    typeof document !== 'undefined' && document.getElementById('vsc-settings-data');
+
   class StorageManager {
     static errorCallback = null;
 
@@ -36,6 +43,18 @@ if (!window.VSC.StorageManager) {
             resolve(storage);
           });
         });
+      }
+
+      // Pre-injected settings from Firefox bridge (via vsc-settings-data element)
+      if (hasPreinjectedSettings) {
+        try {
+          const el = document.getElementById('vsc-settings-data');
+          const parsed = JSON.parse(el.textContent);
+          window.VSC.logger?.debug?.('StorageManager: settings from pre-injected data');
+          return Promise.resolve({ ...defaults, ...parsed.settings });
+        } catch (e) {
+          window.VSC.logger?.warn?.('StorageManager: failed to parse pre-injected settings');
+        }
       }
 
       // No chrome.storage — request settings from bridge via CustomEvent
@@ -98,6 +117,22 @@ if (!window.VSC.StorageManager) {
             resolve();
           });
         });
+      }
+
+      // Firefox postMessage bridge (injected MAIN world)
+      if (hasPostMessage) {
+        const keys = Object.keys(data);
+        if (keys.length === 1 && keys[0] === 'lastSpeed') {
+          const speed = data.lastSpeed;
+          if (typeof speed === 'number' && Number.isFinite(speed)) {
+            window.postMessage({
+              source: 'vsc-page',
+              action: 'storage-update',
+              data: { lastSpeed: speed },
+            }, '*');
+          }
+        }
+        return Promise.resolve();
       }
 
       // Only lastSpeed can cross the trust boundary to chrome.storage
@@ -191,6 +226,7 @@ if (!window.VSC.StorageManager) {
           }
         });
       } else {
+        // Listen for both CustomEvent (Chrome MAIN world) and postMessage (Firefox MAIN world)
         docEl.addEventListener('VSC_STORAGE_CHANGED', (e) => {
           const changes = e.detail;
           for (const [key, change] of Object.entries(changes)) {
@@ -201,6 +237,30 @@ if (!window.VSC.StorageManager) {
           }
           callback(changes);
         });
+
+        // Firefox postMessage bridge
+        if (hasPostMessage) {
+          const handleMessage = (event) => {
+            if (event.source !== window || !event.data || event.data.source !== 'vsc-bridge') {
+              return;
+            }
+            const { action, data } = event.data;
+            if (action === 'storage-changed' && data) {
+              for (const [key, change] of Object.entries(data)) {
+                if (change.newValue !== undefined) {
+                  window.VSC_settings = window.VSC_settings || {};
+                  window.VSC_settings[key] = change.newValue;
+                }
+              }
+              callback(data);
+            } else if (action === 'lifecycle' && data) {
+              docEl.dispatchEvent(new CustomEvent('VSC_MESSAGE', { detail: data }));
+            } else if (action === 'runtime-message' && data) {
+              docEl.dispatchEvent(new CustomEvent('VSC_MESSAGE', { detail: data }));
+            }
+          };
+          window.addEventListener('message', handleMessage);
+        }
       }
     }
   }
