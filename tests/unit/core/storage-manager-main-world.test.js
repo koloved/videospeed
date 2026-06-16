@@ -64,13 +64,13 @@ describe('StorageManager — MAIN world (CustomEvent paths)', () => {
     it('fires VSC_REQUEST_SETTINGS and resolves on VSC_SETTINGS_READY', async () => {
       const bridgedSettings = { lastSpeed: 1.5, rememberSpeed: true };
 
-      // Simulate bridge: respond to request with settings
+      // Simulate bridge: respond to request with settings via postMessage
       const responder = () => {
-        docEl.dispatchEvent(
-          new CustomEvent('VSC_SETTINGS_READY', {
-            detail: { settings: bridgedSettings },
-          })
-        );
+        window.dispatchEvent(new MessageEvent('message', {
+          data: { source: 'vsc-bridge', name: 'VSC_SETTINGS_READY', data: { settings: bridgedSettings } },
+          source: window,
+          origin: '*',
+        }));
       };
       docEl.addEventListener('VSC_REQUEST_SETTINGS', responder);
 
@@ -99,11 +99,11 @@ describe('StorageManager — MAIN world (CustomEvent paths)', () => {
 
     it('merges defaults with received settings', async () => {
       const responder = () => {
-        docEl.dispatchEvent(
-          new CustomEvent('VSC_SETTINGS_READY', {
-            detail: { settings: { lastSpeed: 2.0 } },
-          })
-        );
+        window.dispatchEvent(new MessageEvent('message', {
+          data: { source: 'vsc-bridge', name: 'VSC_SETTINGS_READY', data: { settings: { lastSpeed: 2.0 } } },
+          source: window,
+          origin: '*',
+        }));
       };
       docEl.addEventListener('VSC_REQUEST_SETTINGS', responder);
 

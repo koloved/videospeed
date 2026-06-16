@@ -84,18 +84,21 @@ async function loadBridge() {
   return captured[0] || null;
 }
 
-/** Collect CustomEvents on docEl. Returns { events, cleanup }. */
+/** Spy on window.postMessage to capture vsc-bridge messages. Returns { events, cleanup }. */
 function collectEvents(...names) {
   const events = [];
-  const handlers = names.map((name) => {
-    const h = (e) => events.push({ type: name, detail: e.detail });
-    docEl.addEventListener(name, h);
-    return { name, handler: h };
-  });
+  const origPostMessage = window.postMessage.bind(window);
+  window.postMessage = (message, targetOrigin) => {
+    if (message && message.source === 'vsc-bridge') {
+      if (names.length === 0 || names.includes(message.name)) {
+        events.push({ type: message.name, data: message.data });
+      }
+    }
+    return origPostMessage(message, targetOrigin);
+  };
   return {
     events,
-    cleanup: () =>
-      handlers.forEach(({ name, handler }) => docEl.removeEventListener(name, handler)),
+    cleanup: () => { window.postMessage = origPostMessage; },
   };
 }
 
@@ -142,7 +145,7 @@ describe('content-bridge', () => {
       // Bridge responds with abort signal so inject.js knows not to init
       docEl.dispatchEvent(new CustomEvent('VSC_REQUEST_SETTINGS'));
       expect(events).toHaveLength(1);
-      expect(events[0].detail.abort).toBe(true);
+      expect(events[0].data.abort).toBe(true);
     });
 
     it('signals abort when URL matches blacklist', async () => {
@@ -155,7 +158,7 @@ describe('content-bridge', () => {
       await loadBridge();
       docEl.dispatchEvent(new CustomEvent('VSC_REQUEST_SETTINGS'));
       expect(events).toHaveLength(1);
-      expect(events[0].detail.abort).toBe(true);
+      expect(events[0].data.abort).toBe(true);
     });
 
     it('blacklist is ignored when siteRules exists (post-migration)', async () => {
@@ -171,7 +174,7 @@ describe('content-bridge', () => {
       await loadBridge();
       docEl.dispatchEvent(new CustomEvent('VSC_REQUEST_SETTINGS'));
       expect(events).toHaveLength(1);
-      expect(events[0].detail.abort).toBeUndefined(); // NOT aborted
+      expect(events[0].data.abort).toBeUndefined(); // NOT aborted
     });
 
     it('blacklist uses domain boundary matching (x.com does NOT match localhost)', async () => {
@@ -194,7 +197,7 @@ describe('content-bridge', () => {
       await loadBridge();
       docEl.dispatchEvent(new CustomEvent('VSC_REQUEST_SETTINGS'));
       expect(events).toHaveLength(1);
-      expect(events[0].detail.abort).toBe(true);
+      expect(events[0].data.abort).toBe(true);
     });
   });
 
@@ -213,8 +216,8 @@ describe('content-bridge', () => {
 
       docEl.dispatchEvent(new CustomEvent('VSC_REQUEST_SETTINGS'));
       expect(events).toHaveLength(1);
-      expect(events[0].detail.settings.lastSpeed).toBe(2.5);
-      expect(events[0].detail.settings.rememberSpeed).toBe(true);
+      expect(events[0].data.settings.lastSpeed).toBe(2.5);
+      expect(events[0].data.settings.rememberSpeed).toBe(true);
     });
 
     it('strips sensitive keys, passes customCSS, includes hostname', async () => {
@@ -228,7 +231,7 @@ describe('content-bridge', () => {
 
       docEl.dispatchEvent(new CustomEvent('VSC_REQUEST_SETTINGS'));
 
-      const { settings, hostname } = events[0].detail;
+      const { settings, hostname } = events[0].data;
       // Stripped from settings
       expect(settings.blacklist).toBeUndefined();
       expect(settings.enabled).toBeUndefined();
@@ -306,7 +309,7 @@ describe('content-bridge', () => {
       eventCleanup = cleanup;
 
       onChanged({ enabled: { oldValue: true, newValue: false } }, 'sync');
-      const teardowns = events.filter((e) => e.detail?.type === 'VSC_TEARDOWN');
+      const teardowns = events.filter((e) => e.data?.type === 'VSC_TEARDOWN');
       expect(teardowns).toHaveLength(1);
     });
 
@@ -316,7 +319,7 @@ describe('content-bridge', () => {
       eventCleanup = cleanup;
 
       onChanged({ enabled: { oldValue: false, newValue: true } }, 'sync');
-      const reinits = events.filter((e) => e.detail?.type === 'VSC_REINIT');
+      const reinits = events.filter((e) => e.data?.type === 'VSC_REINIT');
       expect(reinits).toHaveLength(1);
     });
 
@@ -327,7 +330,7 @@ describe('content-bridge', () => {
 
       onChanged({ blacklist: { oldValue: '', newValue: 'localhost' } }, 'sync');
       const lifecycle = events.filter(
-        (e) => e.detail?.type === 'VSC_TEARDOWN' || e.detail?.type === 'VSC_REINIT'
+        (e) => e.data?.type === 'VSC_TEARDOWN' || e.data?.type === 'VSC_REINIT'
       );
       expect(lifecycle).toHaveLength(0);
     });
@@ -342,7 +345,7 @@ describe('content-bridge', () => {
         'sync'
       );
       const lifecycle = events.filter(
-        (e) => e.detail?.type === 'VSC_TEARDOWN' || e.detail?.type === 'VSC_REINIT'
+        (e) => e.data?.type === 'VSC_TEARDOWN' || e.data?.type === 'VSC_REINIT'
       );
       expect(lifecycle).toHaveLength(0);
     });
@@ -355,7 +358,7 @@ describe('content-bridge', () => {
       onChanged({ lastSpeed: { oldValue: 1.0, newValue: 2.0 } }, 'sync');
 
       const lifecycle = events.filter(
-        (e) => e.detail?.type === 'VSC_TEARDOWN' || e.detail?.type === 'VSC_REINIT'
+        (e) => e.data?.type === 'VSC_TEARDOWN' || e.data?.type === 'VSC_REINIT'
       );
       expect(lifecycle).toHaveLength(0);
     });
@@ -391,9 +394,9 @@ describe('content-bridge', () => {
       );
 
       expect(events).toHaveLength(1);
-      expect(events[0].detail.lastSpeed).toBeDefined();
-      expect(events[0].detail.enabled).toBeUndefined();
-      expect(events[0].detail.blacklist).toBeUndefined();
+      expect(events[0].data.lastSpeed).toBeDefined();
+      expect(events[0].data.enabled).toBeUndefined();
+      expect(events[0].data.blacklist).toBeUndefined();
     });
   });
 

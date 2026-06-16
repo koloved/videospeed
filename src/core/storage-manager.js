@@ -20,6 +20,21 @@ if (!window.VSC.StorageManager) {
   const hasPreinjectedSettings =
     typeof document !== 'undefined' && document.getElementById('vsc-settings-data');
 
+  // MAIN-world proxy: forward postMessage events from the ISOLATED bridge
+  // as same-world CustomEvents (Firefox AMO: structured clone makes data accessible).
+  if (hasPostMessage && !hasPreinjectedSettings) {
+    window.addEventListener('message', (event) => {
+      if (event.source !== window || !event.data || event.data.source !== 'vsc-bridge') {
+        return;
+      }
+      const { name, data } = event.data;
+      // VSC_SETTINGS_READY is handled directly by get() via postMessage
+      if (name && name !== 'VSC_SETTINGS_READY' && data !== undefined) {
+        docEl.dispatchEvent(new CustomEvent(name, { detail: data }));
+      }
+    });
+  }
+
   class StorageManager {
     static errorCallback = null;
 
@@ -57,38 +72,45 @@ if (!window.VSC.StorageManager) {
         }
       }
 
-      // No chrome.storage — request settings from bridge via CustomEvent
+      // No chrome.storage — request settings from bridge
       return new Promise((resolve) => {
-        const onReady = (e) => {
-          docEl.removeEventListener('VSC_SETTINGS_READY', onReady);
+        let resolved = false;
+
+        const cleanup = () => {
+          window.removeEventListener('message', onMessage);
           clearTimeout(timeout);
-          const detail = e.detail;
+        };
 
-          // Structured clone failure: detail is null when crossing worlds
-          if (!detail) {
-            window.VSC.logger?.error?.('StorageManager: bridge response is null (clone failed?)');
-            resolve(defaults);
-            return;
-          }
+        // Listen for VSC_SETTINGS_READY via postMessage (structured clone works
+        // across world boundaries in both Chrome and Firefox).
+        const onMessage = (event) => {
+          if (resolved) {return;}
+          if (event.source !== window || !event.data) {return;}
+          const msg = event.data;
+          if (msg.source !== 'vsc-bridge' || msg.name !== 'VSC_SETTINGS_READY') {return;}
+          resolved = true;
+          cleanup();
+          const data = msg.data;
 
-          // Bridge signals abort for blacklisted/disabled sites
-          if (detail.abort) {
+          if (data.abort) {
             window.VSC.logger?.debug?.('StorageManager: site disabled by bridge');
             resolve(null);
             return;
           }
 
-          window.VSC.logger?.debug?.('StorageManager: settings from bridge');
-          resolve({ ...defaults, ...detail.settings });
+          window.VSC.logger?.debug?.('StorageManager: settings from bridge (postMessage)');
+          resolve({ ...defaults, ...data.settings });
         };
 
         const timeout = setTimeout(() => {
-          docEl.removeEventListener('VSC_SETTINGS_READY', onReady);
+          if (resolved) {return;}
+          resolved = true;
+          cleanup();
           window.VSC.logger?.warn?.('StorageManager: settings timeout, using defaults');
           resolve(defaults);
         }, 2000);
 
-        docEl.addEventListener('VSC_SETTINGS_READY', onReady);
+        window.addEventListener('message', onMessage);
 
         docEl.dispatchEvent(new CustomEvent('VSC_REQUEST_SETTINGS'));
       });
@@ -119,8 +141,8 @@ if (!window.VSC.StorageManager) {
         });
       }
 
-      // Firefox postMessage bridge (injected MAIN world)
-      if (hasPostMessage) {
+      // Firefox postMessage bridge (injected MAIN world, only when bridge is active)
+      if (hasPostMessage && hasPreinjectedSettings) {
         const keys = Object.keys(data);
         if (keys.length === 1 && keys[0] === 'lastSpeed') {
           const speed = data.lastSpeed;
@@ -135,7 +157,7 @@ if (!window.VSC.StorageManager) {
         return Promise.resolve();
       }
 
-      // Only lastSpeed can cross the trust boundary to chrome.storage
+      // Chrome MAIN world: only lastSpeed can cross the trust boundary to chrome.storage
       const keys = Object.keys(data);
       if (keys.length === 1 && keys[0] === 'lastSpeed') {
         const speed = data.lastSpeed;

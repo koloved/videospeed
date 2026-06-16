@@ -21,6 +21,18 @@ const SPEED_MAX = 16;
 const docEl = document.documentElement;
 let bridgeInitialized = false;
 
+/**
+ * Dispatch an event to the MAIN world via postMessage.
+ * postMessage uses structured clone which works across world boundaries
+ * in both Chrome and Firefox. The MAIN-world proxy in StorageManager
+ * converts this into a same-world CustomEvent.
+ * @param {string} name - Event name
+ * @param {*} detail - Event detail (must be JSON-serializable)
+ */
+function dispatchToMain(name, detail) {
+  window.postMessage({ source: 'vsc-bridge', name, data: detail }, '*');
+}
+
 async function init() {
   try {
     // Skip about:blank frames — they share the parent window
@@ -52,7 +64,7 @@ async function init() {
       docEl.addEventListener(
         'VSC_REQUEST_SETTINGS',
         () => {
-          docEl.dispatchEvent(new CustomEvent('VSC_SETTINGS_READY', { detail: { abort: true } }));
+          dispatchToMain('VSC_SETTINGS_READY', { abort: true });
         },
         { once: true }
       );
@@ -70,7 +82,7 @@ async function init() {
     docEl.addEventListener(
       'VSC_REQUEST_SETTINGS',
       () => {
-        docEl.dispatchEvent(new CustomEvent('VSC_SETTINGS_READY', { detail: settingsPayload }));
+        dispatchToMain('VSC_SETTINGS_READY', settingsPayload);
       },
       { once: true }
     );
@@ -86,11 +98,11 @@ async function init() {
       // lifecycle — it only relays settings via VSC_STORAGE_CHANGED below.
       // siteRules/blacklist changes take effect on next page load.
       if (changes.enabled?.newValue === false) {
-        docEl.dispatchEvent(new CustomEvent('VSC_MESSAGE', { detail: { type: 'VSC_TEARDOWN' } }));
+        dispatchToMain('VSC_MESSAGE', { type: 'VSC_TEARDOWN' });
         return;
       }
       if (changes.enabled?.oldValue === false && changes.enabled?.newValue !== false) {
-        docEl.dispatchEvent(new CustomEvent('VSC_MESSAGE', { detail: { type: 'VSC_REINIT' } }));
+        dispatchToMain('VSC_MESSAGE', { type: 'VSC_REINIT' });
       }
 
       // Relay changes to MAIN world (filter out keys MAIN never received)
@@ -98,13 +110,13 @@ async function init() {
       delete relayChanges.enabled;
       delete relayChanges.blacklist;
       if (Object.keys(relayChanges).length > 0) {
-        docEl.dispatchEvent(new CustomEvent('VSC_STORAGE_CHANGED', { detail: relayChanges }));
+        dispatchToMain('VSC_STORAGE_CHANGED', relayChanges);
       }
     });
 
     // --- Ongoing: popup/background message relay ---
     chrome.runtime.onMessage.addListener((request) => {
-      docEl.dispatchEvent(new CustomEvent('VSC_MESSAGE', { detail: request }));
+      dispatchToMain('VSC_MESSAGE', request);
     });
 
     // --- Ongoing: speed write-back from MAIN world ---
