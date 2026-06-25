@@ -1,7 +1,3 @@
-# [Install from Chrome Web Store][chrome-web-store-link]
-
-[![Chrome Web Store][chrome-web-store-version]][chrome-web-store-link] [![Chrome Web Store Users][chrome-web-store-users-badge]][chrome-web-store-link] [![Chrome Web Store Users][chrome-web-store-stars]][chrome-web-store-link]
-
 # [Install from Firefox Add-ons (AMO)][amo-link]
 
 [![Mozilla Add-on][amo-version]][amo-link] [![Mozilla Add-on Users][amo-users-badge]][amo-link] [![Mozilla Add-on Ratings][amo-stars]][amo-link]
@@ -72,11 +68,7 @@ for them to take effect.
 
 (MIT License) - Copyright (c) 2014 Ilya Grigorik
 
-[chrome-web-store-version]: https://img.shields.io/chrome-web-store/v/nffaoalbilbmmfgbnbgppjihopabppdk?label=Chrome%20Web%20Store
-[chrome-web-store-users-badge]: https://img.shields.io/chrome-web-store/users/nffaoalbilbmmfgbnbgppjihopabppdk
-[chrome-web-store-stars]: https://img.shields.io/chrome-web-store/stars/nffaoalbilbmmfgbnbgppjihopabppdk
 [github-release-badge]: https://img.shields.io/github/v/release/igrigorik/videospeed
-[chrome-web-store-link]: https://chromewebstore.google.com/detail/video-speed-controller/nffaoalbilbmmfgbnbgppjihopabppdk
 [github-release-link]: https://github.com/igrigorik/videospeed/releases
 [amo-link]: https://addons.mozilla.org/en-US/firefox/addon/video-speed-controller-fox/
 [amo-version]: https://img.shields.io/amo/v/video-speed-controller-fox?label=Firefox%20Add-on
