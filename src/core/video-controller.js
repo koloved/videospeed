@@ -183,6 +183,17 @@ class VideoController {
       innerController.style.left = position.left;
     }
 
+    // Apply user-configured offset (works for both absolute and relative positioning)
+    const offsetX = Number(this.config.settings.controllerOffsetX) || 0;
+    const offsetY = Number(this.config.settings.controllerOffsetY) || 0;
+    if (offsetX !== 0 || offsetY !== 0) {
+      const innerController = window.VSC.ShadowDOMManager.getController(shadow);
+      const currentTop = parseInt(innerController.style.top, 10) || 0;
+      const currentLeft = parseInt(innerController.style.left, 10) || 0;
+      innerController.style.top = `${currentTop + offsetY}px`;
+      innerController.style.left = `${currentLeft + offsetX}px`;
+    }
+
     window.VSC.logger.debug('initializeControls End');
     return wrapper;
   }

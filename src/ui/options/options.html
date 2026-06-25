@@ -85,6 +85,26 @@
           <input id="controllerButtonSize" type="text" value="" />
         </div>
         <div class="row">
+          <label for="controllerOffsetX"
+            >Horizontal offset<br />
+            <em
+              >Move controller away from left edge (negative = left, positive = right).<br />Use
+              this to avoid overlap with video titles. Default: 0</em
+            >
+          </label>
+          <input id="controllerOffsetX" type="text" value="" placeholder="px" />
+        </div>
+        <div class="row">
+          <label for="controllerOffsetY"
+            >Vertical offset<br />
+            <em
+              >Move controller away from top edge (negative = up, positive = down).<br />Use this to
+              avoid overlap with video titles. Default: 0</em
+            >
+          </label>
+          <input id="controllerOffsetY" type="text" value="" placeholder="px" />
+        </div>
+        <div class="row">
           <label for="logLevel"
             >Console Log Level<br />
             <em>Set verbosity in the browser console</em></label
@@ -233,16 +253,24 @@ vsc-controller { top: 50px !important; }
           <h4 id="faq-position">
             The controller overlaps with site controls. How do I reposition it?
           </h4>
-          <p>
-            Go to <strong>Advanced &gt; Controller CSS</strong>. Add a domain rule targeting
-            <code>vsc-controller</code> using the <code>--vsc-domain</code> CSS variable. Example:
-          </p>
-          <p>
-            <code
-              >:root[style*='--vsc-domain: "example.com"'] vsc-controller { position: relative; top:
-              60px; }</code
-            >
-          </p>
+          <p>Two ways:</p>
+          <ul>
+            <li>
+              <strong>Offset settings:</strong> Go to
+              <strong>Advanced &gt; Horizontal offset</strong> /
+              <strong>Vertical offset</strong> and enter pixel values to shift the controller away
+              from the corner. Positive values move it right/down, negative values move it left/up.
+            </li>
+            <li>
+              <strong>Custom CSS:</strong> Add a domain rule targeting
+              <code>vsc-controller</code> using the <code>--vsc-domain</code> CSS variable.
+              Example:<br />
+              <code
+                >:root[style*='--vsc-domain: "example.com"'] vsc-controller { position: relative;
+                top: 60px; }</code
+              >
+            </li>
+          </ul>
           <p>
             You can also drag the controller to a new position on any page. See the existing rules
             for YouTube, Netflix, etc. as reference.

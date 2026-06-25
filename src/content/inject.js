@@ -17,6 +17,10 @@ class VideoSpeedExtension {
    */
   async initialize() {
     try {
+      // Set up audio element tracking first — before VOT or any other script
+      // creates <audio> elements. This patches .play() and createElement to
+      // catch orphaned audio elements invisible to querySelectorAll.
+      window.VSC.ActionHandler.initAudioTracking();
       // Access global modules
       this.VideoController = window.VSC.VideoController;
       this.ActionHandler = window.VSC.ActionHandler;
@@ -415,6 +419,9 @@ class VideoSpeedExtension {
               }
             });
 
+            // Sync audio track playback rates (e.g. VOT dubbing)
+            extension.actionHandler.syncAudioPlaybackRate(targetSpeed);
+
             // Log the successful operation
             window.VSC.logger?.debug(
               `Set speed to ${targetSpeed} on ${videos.length} media elements`
@@ -450,6 +457,9 @@ class VideoSpeedExtension {
               video.playbackRate = 1.0;
             }
           });
+
+          // Sync audio track playback rates back to 1.0
+          extension.actionHandler.syncAudioPlaybackRate(1.0);
 
           window.VSC.logger?.debug(`Reset speed on ${videos.length} media elements`);
           break;

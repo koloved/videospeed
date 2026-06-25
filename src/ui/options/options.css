@@ -389,7 +389,9 @@ input[type='number'] {
 
 /* Specific input widths */
 #controllerOpacity,
-#controllerButtonSize {
+#controllerButtonSize,
+#controllerOffsetX,
+#controllerOffsetY {
   width: 60px;
 }
 

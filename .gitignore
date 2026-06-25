@@ -13,3 +13,5 @@ tests/e2e/screenshots
 node_modules
 coverage
 plan.md
+build-videospeed-amo.ps1
+dist.zip

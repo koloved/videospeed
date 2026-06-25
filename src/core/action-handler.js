@@ -9,6 +9,12 @@ class ActionHandler {
   constructor(config, eventManager) {
     this.config = config;
     this.eventManager = eventManager;
+
+    // Initialize audio element tracking once globally. VOT and similar scripts
+    // create <audio> elements orphaned from the DOM; our tracking intercepts
+    // them via patched .play() and createElement so syncAudioPlaybackRate
+    // can find them later.
+    ActionHandler.initAudioTracking();
   }
 
   /**
@@ -451,6 +457,96 @@ class ActionHandler {
   }
 
   /**
+   * Initialize audio element tracking.
+   * VOT and similar scripts create <audio> elements via new Audio() or
+   * document.createElement('audio') without appending them to the DOM,
+   * making them invisible to querySelectorAll. We patch .play() and
+   * document.createElement to catch ALL audio elements regardless of
+   * whether they're in the DOM tree, then keep them in a tracked set so
+   * syncAudioPlaybackRate can find them later.
+   *
+   * Call this once early in initialization (before VOT scripts create audio).
+   * Idempotent — safe to call multiple times.
+   */
+  static initAudioTracking() {
+    if (window.VSC._trackedAudios) {
+      return;
+    } // already set up
+    window.VSC._trackedAudios = new Set();
+
+    // 1. Patch HTMLAudioElement.prototype.play to catch orphaned audio elements
+    //    that start playing (VOT calls .play() on its off-DOM audio elements).
+    if (!HTMLAudioElement.prototype.play.__vscPatched) {
+      const origPlay = HTMLAudioElement.prototype.play;
+      const patchedPlay = function () {
+        if (this instanceof HTMLAudioElement) {
+          window.VSC._trackedAudios.add(this);
+        }
+        return origPlay.apply(this, arguments);
+      };
+      patchedPlay.__vscPatched = true;
+      HTMLAudioElement.prototype.play = patchedPlay;
+    }
+
+    // 2. Also patch document.createElement('audio') in case someone creates
+    //    an audio element without ever calling .play().
+    if (!Document.prototype.createElement.__vscPatched) {
+      const origCreateElement = Document.prototype.createElement;
+      const patchedCreateElement = function (tagName, ...args) {
+        const el = origCreateElement.call(this, tagName, ...args);
+        if (tagName && tagName.toLowerCase() === 'audio') {
+          window.VSC._trackedAudios.add(el);
+        }
+        return el;
+      };
+      patchedCreateElement.__vscPatched = true;
+      Document.prototype.createElement = patchedCreateElement;
+    }
+  }
+
+  /**
+   * Sync playback rate on ALL known <audio> elements — including orphaned
+   * ones created via new Audio() and never added to the DOM (as VOT does).
+   * Called automatically from setSpeed().
+   * @param {number} speed - Target playback rate
+   */
+  syncAudioPlaybackRate(speed) {
+    try {
+      const tracked = window.VSC._trackedAudios;
+      // Gather all audio elements: from tracking set + from DOM as fallback.
+      const seen = new Set();
+      if (tracked) {
+        for (const audio of tracked) {
+          if (audio instanceof HTMLAudioElement) {
+            seen.add(audio);
+          }
+        }
+      }
+      // DOM fallback — catches audio appended to the document normally.
+      document.querySelectorAll('audio').forEach((el) => seen.add(el));
+
+      for (const audio of seen) {
+        if (!audio.currentSrc && !audio.src) {
+          continue;
+        }
+
+        // Set the target rate on the audio element.
+        audio.playbackRate = speed;
+
+        // Calling .play() on an already-playing audio element is spec-just a
+        // no-op (returns a resolved promise), but in practice it can nudge
+        // audio backends (especially when connected to AudioContext via
+        // createMediaElementSource) to re-read the element's rate.
+        if (!audio.paused) {
+          audio.play().catch(() => {});
+        }
+      }
+    } catch (e) {
+      window.VSC.logger.debug(`syncAudioPlaybackRate error: ${e.message}`);
+    }
+  }
+
+  /**
    * Set video playback speed with complete state management
    * Unified implementation with all functionality - no fragmented logic
    * @param {HTMLMediaElement} video - Video element
@@ -481,6 +577,12 @@ class ActionHandler {
 
     // 3. Set the actual playback rate via site handler (native ratechange fires here, blocked by cooldown)
     window.VSC.siteHandlerManager.handleSpeedChange(video, numericSpeed);
+
+    // 3b. Sync playback rate on all audio elements (e.g. voice-over translation tracks).
+    //      VOT and similar extensions create <audio> elements for dubbed audio; this
+    //      ensures they stay in sync with the video speed even when ratechange events
+    //      aren't processed correctly by those players during active playback.
+    this.syncAudioPlaybackRate(numericSpeed);
 
     // 4. Dispatch synthetic event with source tracking
     video.dispatchEvent(

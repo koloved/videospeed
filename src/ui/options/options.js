@@ -727,6 +727,8 @@ async function save_options() {
     const startHidden = document.getElementById('startHidden').checked;
     const controllerOpacity = Number(document.getElementById('controllerOpacity').value);
     const controllerButtonSize = Number(document.getElementById('controllerButtonSize').value);
+    const controllerOffsetX = Number(document.getElementById('controllerOffsetX').value) || 0;
+    const controllerOffsetY = Number(document.getElementById('controllerOffsetY').value) || 0;
     const logLevel = parseInt(document.getElementById('logLevel').value);
     const siteRules = collectSiteRules();
     const customCSS = document.getElementById('controllerCSS').value;
@@ -767,6 +769,8 @@ async function save_options() {
       startHidden: startHidden,
       controllerOpacity: controllerOpacity,
       controllerButtonSize: controllerButtonSize,
+      controllerOffsetX: controllerOffsetX,
+      controllerOffsetY: controllerOffsetY,
       logLevel: logLevel,
       keyBindings: keyBindings,
       siteRules: siteRules,
@@ -813,6 +817,8 @@ async function restore_options() {
     document.getElementById('startHidden').checked = storage.startHidden;
     document.getElementById('controllerOpacity').value = storage.controllerOpacity;
     document.getElementById('controllerButtonSize').value = storage.controllerButtonSize;
+    document.getElementById('controllerOffsetX').value = storage.controllerOffsetX;
+    document.getElementById('controllerOffsetY').value = storage.controllerOffsetY;
     document.getElementById('logLevel').value = storage.logLevel;
     document.getElementById('controllerCSS').value = storage.customCSS ?? '';
 

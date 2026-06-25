@@ -39,6 +39,8 @@ if (!window.VSC.Constants.DEFAULT_SETTINGS) {
     startHidden: false, // default: false
     controllerOpacity: 0.3, // default: 0.3
     controllerButtonSize: 14,
+    controllerOffsetX: 0, // default horizontal offset (px)
+    controllerOffsetY: 0, // default vertical offset (px)
     customCSS: '', // user's additional CSS injected alongside the built-in defaults
     keyBindings: PREDEFINED_ACTIONS.map((action) => ({
       action,
