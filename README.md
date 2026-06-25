@@ -1,6 +1,10 @@
 # [Install from Chrome Web Store][chrome-web-store-link]
 
-[![Chrome Web Store][chrome-web-store-version]][chrome-web-store-link] [![Chrome Web Store Users][chrome-web-store-users-badge]][chrome-web-store-link] [![Chrome Web Store Users][chrome-web-store-stars]][chrome-web-store-link]  
+[![Chrome Web Store][chrome-web-store-version]][chrome-web-store-link] [![Chrome Web Store Users][chrome-web-store-users-badge]][chrome-web-store-link] [![Chrome Web Store Users][chrome-web-store-stars]][chrome-web-store-link]
+
+# [Install from Firefox Add-ons (AMO)][amo-link]
+
+[![Mozilla Add-on][amo-version]][amo-link] [![Mozilla Add-on Users][amo-users-badge]][amo-link] [![Mozilla Add-on Ratings][amo-stars]][amo-link]
 
 **Video Speed Controller** gives you fine-grained control over any HTML5 video
 or audio element, on any site.
@@ -24,7 +28,6 @@ means higher engagement. With practice, many settle at 2x or above and find it
 HTML5 media elements expose a native playback rate API, but most players hide
 or artificially limit it. Speed adjustments should be effortless and frequent:
 we don't read at a fixed pace, and we shouldn't watch at one either.
-
 
 ## Features
 
@@ -73,6 +76,9 @@ for them to take effect.
 [chrome-web-store-users-badge]: https://img.shields.io/chrome-web-store/users/nffaoalbilbmmfgbnbgppjihopabppdk
 [chrome-web-store-stars]: https://img.shields.io/chrome-web-store/stars/nffaoalbilbmmfgbnbgppjihopabppdk
 [github-release-badge]: https://img.shields.io/github/v/release/igrigorik/videospeed
-
 [chrome-web-store-link]: https://chromewebstore.google.com/detail/video-speed-controller/nffaoalbilbmmfgbnbgppjihopabppdk
 [github-release-link]: https://github.com/igrigorik/videospeed/releases
+[amo-link]: https://addons.mozilla.org/en-US/firefox/addon/video-speed-controller-fox/
+[amo-version]: https://img.shields.io/amo/v/video-speed-controller-fox?label=Firefox%20Add-on
+[amo-users-badge]: https://img.shields.io/amo/users/video-speed-controller-fox
+[amo-stars]: https://img.shields.io/amo/stars/video-speed-controller-fox
