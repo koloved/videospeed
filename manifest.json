@@ -17,7 +17,8 @@
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs", "activeTab", "declarativeNetRequest"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js"
   },
